@@ -9,7 +9,7 @@ from model.cyclecoopnets import CycleCoopNets
 from data.unaligned_data import UnalignedDataLoader
 
 FLAGS = tf.app.flags.FLAGS
-
+tf.flags.DEFINE_boolean('overfit', True, 'Whether load all the test images')
 tf.flags.DEFINE_integer('load_size', 286, 'Image size to load images')
 tf.flags.DEFINE_integer('image_size', 256, 'Image size to crop images')
 
