@@ -5,15 +5,15 @@ import os
 import time
 import numpy as np
 import tensorflow as tf
-from model.cyclecoopnets import CycleCoopNets
+from model.cyclecoopnets_edge import CycleCoopNets
 from data.unaligned_data import UnalignedDataLoader
 
 FLAGS = tf.app.flags.FLAGS
-tf.flags.DEFINE_boolean('overfit', True, 'Whether load all the test images')
-tf.flags.DEFINE_integer('load_size', 286, 'Image size to load images')
+tf.flags.DEFINE_boolean('overfit', True, 'Whether load all the images')
+tf.flags.DEFINE_integer('load_size', 256, 'Image size to load images')
 tf.flags.DEFINE_integer('image_size', 256, 'Image size to crop images')
 
-tf.flags.DEFINE_integer('batch_size', 1, 'Batch size of training images')
+tf.flags.DEFINE_integer('batch_size', 5, 'Batch size of training images')
 tf.flags.DEFINE_integer('num_vis', 1, 'Batch size of training images')
 tf.flags.DEFINE_integer('num_epochs', 100, 'Number of epochs to train')
 tf.flags.DEFINE_integer('epoch_start_decay', 50, 'Number of epochs to train')
@@ -23,10 +23,10 @@ tf.flags.DEFINE_float('beta1', 0.5, 'Momentum term of adam')
 
 # parameters for descriptorNet
 tf.flags.DEFINE_float('d_lr', 0.0005, 'Initial learning rate for descriptor')
-tf.flags.DEFINE_float('des_refsig', 0.016, 'Standard deviation for reference distribution of descriptor')
+tf.flags.DEFINE_float('des_refsig', 0.016, 'Standard deviation for reference distribution of descriptor') # 0.016
 tf.flags.DEFINE_integer('des_sample_steps', 30, 'Sample steps for Langevin dynamics of descriptor') # 15
 tf.flags.DEFINE_float('des_step_size', 0.002, 'Step size for descriptor Langevin dynamics') # 0.002
-tf.flags.DEFINE_integer('gpu', 0, 'Gpu Device')
+tf.flags.DEFINE_integer('gpu', 1, 'Gpu Device')
 
 tf.flags.DEFINE_float('init_gain', 0.002, 'Step size for descriptor Langevin dynamics')
 
@@ -93,7 +93,7 @@ def main(_):
         input_dir_A = os.path.join(FLAGS.dataroot, category, FLAGS.testA_postfix)
         input_dir_B = os.path.join(FLAGS.dataroot, category, FLAGS.testB_postfix)
         print(input_dir_A, input_dir_B)
-        test_data = UnalignedDataLoader(input_dir_A, input_dir_B, no_flip=True, max_dataset_size=100 if FLAGS.overfit else 'inf',
+        test_data = UnalignedDataLoader(input_dir_A, input_dir_B, no_flip=True, max_dataset_size=200 if FLAGS.overfit else 'inf',
             load_size=FLAGS.image_size, crop_size=FLAGS.image_size,  shuffle=False, serial_batches=True)
         # ckpt = '%s/checkpoints/model.ckpt-%d' % (FLAGS.output_dir, FLAGS.ckpt)
         # model.inference(sess, dataset, ckpt)
@@ -106,7 +106,7 @@ def main(_):
             ckpt = '%s/checkpoints/model.ckpt-%s' % (output_dir, FLAGS.ckpt)
             model.inference(sess, test_data, ckpt)
         else:
-            train_data = UnalignedDataLoader(input_dir_A, input_dir_B,  max_dataset_size=100 if FLAGS.overfit else 'inf',
+            train_data = UnalignedDataLoader(input_dir_A, input_dir_B,  max_dataset_size=200 if FLAGS.overfit else 'inf',
                 load_size=FLAGS.load_size, crop_size=FLAGS.image_size, shuffle=True, serial_batches=True)
 
             model.train(sess, train_data, test_data, FLAGS.ckpt)
