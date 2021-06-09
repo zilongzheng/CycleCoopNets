@@ -6,10 +6,6 @@ import os
 import math
 import numpy as np
 from PIL import Image
-# import scipy.misc
-from skimage.measure import compare_psnr, compare_ssim
-# import h5py
-from six.moves import xrange
 
 IMG_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.ppm', '.bmp', '.pgm']
 
@@ -82,18 +78,6 @@ def cut_interpolates(filename, image_size=64, margin_syn=2):
 
     return images
 
-def eval_psnr(true_imgs, test_imgs, a_min=0.0, a_max=255.0):
-    #true_imgs = get_cell_images(im_true, image_size=image_size)
-    # test_imgs = get_cell_images(im_test, image_size=image_size)
-    # print(test_imgs.shape)
-    psnrs = []
-    drange = a_max - a_min
-    for i in range(len(true_imgs)):
-        t_img = np.clip(true_imgs[i], a_min, a_max)
-        f_img = np.clip(test_imgs[i], a_min, a_max)
-        psnrs.append(compare_psnr(t_img, f_img, data_range=drange))
-    return psnrs
-
 def eval_mse(true_imgs, test_imgs, a_min=-1, a_max=1):
     #true_imgs = get_cell_images(im_true, image_size=image_size)
     # test_imgs = get_cell_images(im_test, image_size=image_size)
@@ -105,28 +89,6 @@ def eval_mse(true_imgs, test_imgs, a_min=-1, a_max=1):
         f_img = np.clip(test_imgs[i], a_min, a_max)
         mses.append(np.square(t_img - f_img).mean())
     return mses
-
-
-def eval_ssim(true_imgs, test_imgs, a_min=0.0, a_max=255.0):
-    ssims = []
-    drange = a_max - a_min
-    for i in range(len(true_imgs)):
-        t_img = np.clip(true_imgs[i], a_min, a_max)
-        f_img = np.clip(test_imgs[i], a_min, a_max)
-        ssims.append(compare_ssim(t_img, f_img, data_range=drange, multichannel=True))
-    return ssims
-
-
-def get_mean_ssim(im_true, im_test, image_size=256):
-    true_imgs = get_cell_images(im_true, image_size=image_size)
-    test_imgs = get_cell_images(im_test, image_size=image_size)
-    print(test_imgs.shape)
-    mssim = np.zeros(shape=len(true_imgs), dtype=np.float32)
-    drange = test_imgs.max() - test_imgs.min()
-    for i in range(len(true_imgs)):
-        mssim[i] = compare_ssim(true_imgs[i], test_imgs[i], data_range=drange, multichannel=True)
-    return mssim.mean()
-
 
 def clip_by_value(input_, low=0, high=1):
     return np.minimum(high, np.maximum(low, input_))
@@ -150,27 +112,6 @@ def img2cell(images, row_num=10, col_num=10, low=-1, high=1):
             row_imgs.append(np.concatenate(col_imgs, axis=1))
         cells.append(np.concatenate(row_imgs, axis=0))
     return cells
-
-# def img2cell(images, row_num=10, col_num=10, low=-1, high=1, margin_syn=2):
-#     [num_images, image_size] = images.shape[0:2]
-#     num_cells = int(math.ceil(num_images / (col_num * row_num)))
-#     cell_image = np.zeros((num_cells, row_num * image_size + (row_num-1)*margin_syn,
-#                            col_num * image_size + (col_num-1)*margin_syn, 3))
-#     for i in range(num_images):
-#         cell_id = int(math.floor(i / (col_num * row_num)))
-#         idx = i % (col_num * row_num)
-#         ir = int(math.floor(idx / col_num))
-#         ic = idx % col_num
-#         temp = clip_by_value(np.squeeze(images[i]), low, high)
-#         cmin = temp.min()
-#         cmax = temp.max()
-#         cscale = cmax - cmin
-#         if cscale == 0:
-#             cscale = 1
-#         temp = (temp - cmin) / cscale
-#         cell_image[cell_id, (image_size+margin_syn)*ir:image_size + (image_size+margin_syn)*ir,
-#                     (image_size+margin_syn)*ic:image_size + (image_size+margin_syn)*ic,:] = temp
-#     return cell_image
 
 def saveSampleImages(sample_results, filename, row_num=10, col_num=10, margin_syn=2, save_all=False):
     if save_all:

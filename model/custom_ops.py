@@ -45,6 +45,7 @@ def leaky_relu(input_, leakiness=0.2):
     return tf.maximum(input_, leakiness * input_)
 
 
+
 def conv2d(input_, output_dim, kernal=(5, 5), strides=(2, 2), padding='SAME', activate_fn=None, stddev=0.02, name="conv2d"):
     if type(kernal) == list or type(kernal) == tuple:
         [k_h, k_w] = list(kernal)

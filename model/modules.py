@@ -1,5 +1,28 @@
-import tensorflow as tf
+try:
+    import tensorflow.compat.v1 as tf
+except:
+    import tensorflow as tf
 from model.custom_ops import *
+
+
+def get_norm_layer(norm_type):
+    if norm_type == 'batch_norm':
+        return batch_norm
+    elif norm_type == 'instance_norm':
+        return instance_norm
+    elif norm_type == 'none':
+        return lambda x: x
+    else:
+        raise NotImplementedError(
+            'Normalization type %s is not implemented.' % norm_type)
+
+
+def get_weight_initializer(init_type='random_normal'):
+    if init_type in ['random_normal', 'truncated_normal', 'he_normal']:
+        return getattr(tf.initializers, init_type)
+    else:
+        raise NotImplementedError(
+            'Initialization type %s is not implemented.' % init_type)
 
 
 class TFModule():
@@ -22,170 +45,55 @@ class TFModule():
         raise NotImplementedError()
 
 
-class Descriptor(TFModule):
-    def __init__(self, num_fc=100, init_gain=0.02, net_type='3_layer', name='descriptor'):
-        super(Descriptor, self).__init__(name)
-        self.num_fc = num_fc
+class ConvEBM(TFModule):
+    def __init__(self, net_type='3_layer', weight_init='random_normal', init_gain=0.02, name='conv_ebm'):
+        super(ConvEBM, self).__init__(name)
         self.init_gain = init_gain
         self.net_type = net_type
+        self.weight_init = get_weight_initializer(weight_init)
 
     def __call__(self, inputs, training):
         if self.net_type == '3_layer':
-            return self.descriptor_3_layer(inputs, training)
-        elif self.net_type == '4_layer':
-            return self.descriptor_4_layer(inputs, training)
-        elif self.net_type == '5_layer':
-            return self.descriptor_5_layer(inputs, training)
-        elif self.net_type == '5_layer1':
-            return self.descriptor_5_layer1(inputs, training)
+            return self.ebm_3_layer(inputs, training)
+        elif self.net_tyep == '4_layer':
+            return self.ebm_4_layer(inputs, training)
         else:
             raise ValueError(
                 "Undefined descriptor type: {}".format(self.net_type))
 
-    def descriptor_3_layer(self, inputs, training):
+    def ebm_3_layer(self, inputs, training):
         ndf = 64
-        kernel_initializer = tf.initializers.random_normal(
-            stddev=self.init_gain)
+        kernel_initializer = self.weight_init(stddev=self.init_gain)
         with tf.variable_scope(self.name, reuse=tf.AUTO_REUSE):
             out = tf.layers.conv2d(inputs, ndf, (5, 5), strides=(
                 2, 2), padding="same", kernel_initializer=kernel_initializer, activation=tf.nn.leaky_relu, name="conv1")
-
             out = tf.layers.conv2d(out, ndf * 2, (3, 3), strides=(2, 2), padding="same",
                                    kernel_initializer=kernel_initializer, activation=tf.nn.leaky_relu, name="conv2")
 
             out = tf.layers.conv2d(out, ndf * 4, (3, 3), strides=(1, 1), padding="same",
                                    kernel_initializer=kernel_initializer, activation=tf.nn.leaky_relu, name="conv3")
 
-            out = tf.layers.conv2d(out, self.num_fc, out.get_shape().as_list()[1:3], strides=(
+            out = tf.layers.conv2d(out, 1, out.get_shape().as_list()[1:3], strides=(
                 1, 1), padding="valid", kernel_initializer=kernel_initializer, name="fc")
         return out
 
-    def descriptor_4_layer(self, inputs, training):
+
+    def ebm_4_layer(self, inputs, training):
         ndf = 64
-        kernel_initializer = tf.initializers.random_normal(
-            stddev=self.init_gain)
-        with tf.variable_scope(self.name, reuse=tf.AUTO_REUSE):
-            out = tf.layers.conv2d(inputs, ndf, (3, 3), strides=(
-                1, 1), padding="same", kernel_initializer=kernel_initializer, activation=tf.nn.relu, name="conv1")
-
-            out = tf.layers.conv2d(out, ndf * 2, (4, 4), strides=(2, 2), padding="same",
-                                   kernel_initializer=kernel_initializer, activation=tf.nn.relu, name="conv2")
-
-            out = tf.layers.conv2d(out, ndf * 4, (4, 4), strides=(2, 2), padding="same",
-                                   kernel_initializer=kernel_initializer, activation=tf.nn.relu, name="conv3")
-
-            out = tf.layers.conv2d(out, ndf * 8, (4, 4), strides=(2, 2), padding="same",
-                                   kernel_initializer=kernel_initializer, activation=tf.nn.relu, name="conv4")
-
-            out = tf.layers.conv2d(out, self.num_fc, out.get_shape().as_list()[1:3], strides=(
-                1, 1), padding="valid", kernel_initializer=kernel_initializer, name="fc")
-        return out
-
-    def descriptor_4_layer(self, inputs, training):
-        ndf = 64
-        kernel_initializer = tf.initializers.random_normal(
-            stddev=self.init_gain)
-        with tf.variable_scope(self.name, reuse=tf.AUTO_REUSE):
-            out = tf.layers.conv2d(inputs, ndf, (3, 3), strides=(
-                1, 1), padding="same", kernel_initializer=kernel_initializer, activation=tf.nn.relu, name="conv1")
-
-            out = tf.layers.conv2d(out, ndf * 2, (4, 4), strides=(2, 2), padding="same",
-                                   kernel_initializer=kernel_initializer, activation=tf.nn.leaky_relu, name="conv2")
-
-            out = tf.layers.conv2d(out, ndf * 4, (4, 4), strides=(2, 2), padding="same",
-                                   kernel_initializer=kernel_initializer, activation=tf.nn.leaky_relu, name="conv3")
-
-            out = tf.layers.conv2d(out, ndf * 8, (4, 4), strides=(2, 2), padding="same",
-                                   kernel_initializer=kernel_initializer, activation=tf.nn.leaky_relu, name="conv4")
-
-            out = tf.layers.conv2d(out, self.num_fc, out.get_shape().as_list()[1:3], strides=(
-                1, 1), padding="valid", kernel_initializer=kernel_initializer, name="fc")
-        return out
-
-    def descriptor_5_layer(self, inputs, training):
-        ndf = 64
-        kernel_initializer = tf.initializers.random_normal(
-            stddev=self.init_gain)
+        kernel_initializer = self.weight_init(stddev=self.init_gain)
         with tf.variable_scope(self.name, reuse=tf.AUTO_REUSE):
             out = tf.layers.conv2d(inputs, ndf, (3, 3), strides=(
                 1, 1), padding="same", kernel_initializer=kernel_initializer, activation=tf.nn.leaky_relu, name="conv1")
-
             out = tf.layers.conv2d(out, ndf * 2, (4, 4), strides=(2, 2), padding="same",
                                    kernel_initializer=kernel_initializer, activation=tf.nn.leaky_relu, name="conv2")
-
             out = tf.layers.conv2d(out, ndf * 4, (4, 4), strides=(2, 2), padding="same",
                                    kernel_initializer=kernel_initializer, activation=tf.nn.leaky_relu, name="conv3")
-
             out = tf.layers.conv2d(out, ndf * 8, (4, 4), strides=(2, 2), padding="same",
                                    kernel_initializer=kernel_initializer, activation=tf.nn.leaky_relu, name="conv4")
 
-            out = tf.layers.conv2d(out, ndf * 8, (4, 4), strides=(2, 2), padding="same",
-                                   kernel_initializer=kernel_initializer, activation=tf.nn.leaky_relu, name="conv5")
-
-            out = tf.layers.conv2d(out, ndf * 8, (4, 4), strides=(2, 2), padding="same",
-                                   kernel_initializer=kernel_initializer, activation=tf.nn.leaky_relu, name="conv6")
-
-            out = tf.layers.conv2d(out, self.num_fc, out.get_shape().as_list()[1:3], strides=(
+            out = tf.layers.conv2d(out, 100, out.get_shape().as_list()[1:3], strides=(
                 1, 1), padding="valid", kernel_initializer=kernel_initializer, name="fc")
         return out
-
-    def descriptor_5_layer1(self, inputs, training):
-        ndf = 64
-        kernel_initializer = tf.initializers.random_normal(
-            stddev=self.init_gain)
-        with tf.variable_scope(self.name, reuse=tf.AUTO_REUSE):
-            out = tf.layers.conv2d(inputs, ndf, (5, 5), strides=(
-                2, 2), padding="same", kernel_initializer=kernel_initializer, activation=tf.nn.leaky_relu, name="conv1")
-
-            out = tf.layers.conv2d(out, ndf * 2, (5, 5), strides=(2, 2), padding="same",
-                                   kernel_initializer=kernel_initializer, activation=tf.nn.leaky_relu, name="conv2")
-
-            out = tf.layers.conv2d(out, ndf * 4, (5, 5), strides=(2, 2), padding="same",
-                                   kernel_initializer=kernel_initializer, activation=tf.nn.leaky_relu, name="conv3")
-
-            out = tf.layers.conv2d(out, ndf * 8, (5, 5), strides=(2, 2), padding="same",
-                                   kernel_initializer=kernel_initializer, activation=tf.nn.leaky_relu, name="conv4")
-
-            out = tf.layers.conv2d(out, ndf * 8, (3, 3), strides=(2, 2), padding="same",
-                                   kernel_initializer=kernel_initializer, activation=tf.nn.leaky_relu, name="conv5")
-
-            out = tf.layers.conv2d(out, self.num_fc, out.get_shape().as_list()[1:3], strides=(
-                1, 1), padding="valid", kernel_initializer=kernel_initializer, name="fc")
-        return out
-
-
-def descriptor_digit(inputs, num_fc=100, init_gain=0.02, name='des_net', return_str=False):
-    ndf = 64
-    kernel_initializer = tf.initializers.random_normal(stddev=init_gain)
-    output_list = [inputs]
-    with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
-        # padded_input = tf.pad(inputs, [[0, 0], [3, 3], [3, 3], [0, 0]], "REFLECT")
-        # output_list.append(padded_input)
-
-        out = tf.layers.conv2d(inputs, ndf, (3, 3), strides=(
-            1, 1), padding="same", kernel_initializer=kernel_initializer, activation=tf.nn.leaky_relu, name="conv1")
-        output_list.append(out)
-
-        out = tf.layers.conv2d(out, ndf * 2, (4, 4), strides=(2, 2), padding="same",
-                               kernel_initializer=kernel_initializer, activation=tf.nn.leaky_relu, name="conv2")
-        output_list.append(out)
-
-        out = tf.layers.conv2d(out, ndf * 4, (4, 4), strides=(2, 2), padding="same",
-                               kernel_initializer=kernel_initializer, activation=tf.nn.leaky_relu, name="conv3")
-        output_list.append(out)
-
-        out = tf.layers.conv2d(out, ndf * 8, (4, 4), strides=(2, 2), padding="same",
-                               kernel_initializer=kernel_initializer, activation=tf.nn.leaky_relu, name="conv4")
-        output_list.append(out)
-
-        out = tf.layers.conv2d(out, num_fc, out.get_shape().as_list()[1:3], strides=(
-            1, 1), padding="valid", kernel_initializer=kernel_initializer, name="fc")
-        output_list.append(out)
-
-        if return_str:
-            return out, '\n'.join([str(el) for el in output_list])
-        else:
-            return out
 
 
 def conv_batch_relu(input_, output_dim, kernal=(4, 4), strides=(2, 2), padding='SAME', norm_layer=batch_norm, activate_fn=tf.nn.relu, name="layer"):
@@ -321,18 +229,6 @@ def build_residual_block(input_, dim, norm_layer=batch_norm, use_dropout=False, 
         return conv_block + input_
 
 
-def get_norm_layer(norm_type):
-    if norm_type == 'batch_norm':
-        return batch_norm
-    elif norm_type == 'instance_norm':
-        return instance_norm
-    elif norm_type == 'none':
-        return lambda x: x
-    else:
-        raise NotImplementedError(
-            'Normalization type %s is not implemented.' % norm_type)
-
-
 class ResidualBlock(TFModule):
     def __init__(self, dim, norm_layer=batch_norm, use_dropout=False, init_gain=0.02, name="residual_block"):
         super(ResidualBlock, self).__init__(name)
@@ -362,6 +258,7 @@ class ResidualBlock(TFModule):
             conv_block = norm_layer(conv_block, training=training)
         return conv_block + inputs
 
+
 class ResnetGeneratorMulti(TFModule):
     def __init__(self, img_nc=3, noise_type='all', norm_type='instance_norm', num_blocks=2, init_gain=0.02, use_dropout=False, name='gen_res'):
         super(ResnetGeneratorMulti, self).__init__(name)
@@ -383,7 +280,8 @@ class ResnetGeneratorMulti(TFModule):
             #     inputs = tf.tile(inputs, [tf.shape(noise)[0], 1, 1, 1])
             if self.noise_type == 'input' or self.noise_type == 'all':
                 z_inp = tf.reshape(noise, [-1, 1, 1, noise.get_shape()[-1]])
-                z_inp = tf.tile(z_inp, [1, inputs.get_shape()[1], inputs.get_shape()[2], 1])
+                z_inp = tf.tile(z_inp, [1, inputs.get_shape()[
+                                1], inputs.get_shape()[2], 1])
                 inputs = tf.concat([inputs, z_inp], axis=-1)
             padded_input = tf.pad(
                 inputs, [[0, 0], [3, 3], [3, 3], [0, 0]], "REFLECT")
@@ -395,7 +293,8 @@ class ResnetGeneratorMulti(TFModule):
 
             if self.noise_type == 'all':
                 z_inp = tf.reshape(noise, [-1, 1, 1, noise.get_shape()[-1]])
-                z_inp = tf.tile(z_inp, [1, conv1.get_shape()[1], conv1.get_shape()[2], 1])
+                z_inp = tf.tile(z_inp, [1, conv1.get_shape()[
+                                1], conv1.get_shape()[2], 1])
                 conv1 = tf.concat([conv1, z_inp], axis=-1)
 
             conv2 = tf.layers.conv2d(conv1, ngf * 2, (3, 3), strides=(2, 2), padding="same",
@@ -405,7 +304,8 @@ class ResnetGeneratorMulti(TFModule):
 
             if self.noise_type == 'all':
                 z_inp = tf.reshape(noise, [-1, 1, 1, noise.get_shape()[-1]])
-                z_inp = tf.tile(z_inp, [1, conv2.get_shape()[1], conv2.get_shape()[2], 1])
+                z_inp = tf.tile(z_inp, [1, conv2.get_shape()[
+                                1], conv2.get_shape()[2], 1])
                 conv2 = tf.concat([conv2, z_inp], axis=-1)
             conv3 = tf.layers.conv2d(conv2, ngf * 4, (3, 3), strides=(2, 2), padding="same",
                                      kernel_initializer=kernel_initializer, name="conv3")

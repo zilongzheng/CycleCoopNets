@@ -49,7 +49,7 @@ class UnalignedDataLoader(object):
         # self.images_A = self.images_A[:self.A_size]
         # self.images_B = self.images_B[:self.B_size]
         # print('Loaded images, images A: {}, images B: {}'.format(self.images_A.shape, self.images_B.shape))
-        print(self.A_size, self.B_size)
+        # print(self.A_size, self.B_size)
         self.num_images = max(self.A_size, self.B_size)
 
         if shuffle:
