@@ -55,7 +55,7 @@ class ConvEBM(TFModule):
     def __call__(self, inputs, training):
         if self.net_type == '3_layer':
             return self.ebm_3_layer(inputs, training)
-        elif self.net_tyep == '4_layer':
+        elif self.net_type == '4_layer':
             return self.ebm_4_layer(inputs, training)
         else:
             raise ValueError(
@@ -73,7 +73,7 @@ class ConvEBM(TFModule):
             out = tf.layers.conv2d(out, ndf * 4, (3, 3), strides=(1, 1), padding="same",
                                    kernel_initializer=kernel_initializer, activation=tf.nn.leaky_relu, name="conv3")
 
-            out = tf.layers.conv2d(out, 1, out.get_shape().as_list()[1:3], strides=(
+            out = tf.layers.conv2d(out, 100, out.get_shape().as_list()[1:3], strides=(
                 1, 1), padding="valid", kernel_initializer=kernel_initializer, name="fc")
         return out
 

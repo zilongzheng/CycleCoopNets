@@ -52,9 +52,9 @@ class CycleCoopNets(object):
         self.gen_B = modules.ResnetGenerator(img_nc=self.img_nc, norm_type=self.norm_type,
                                              num_blocks=self.gen_num_blocks, init_gain=self.init_gain, use_dropout=self.use_dropout, name='gen_B')
         self.ebm_A = modules.ConvEBM(
-            net_type='3_layer', init_gain=self.init_gain, name='ebm_A')
+            net_type='4_layer', init_gain=self.init_gain, name='ebm_A')
         self.ebm_B = modules.ConvEBM(
-            net_type='3_layer', init_gain=self.init_gain, name='ebm_B')
+            net_type='4_layer', init_gain=self.init_gain, name='ebm_B')
 
         if isTrain:
             # training params

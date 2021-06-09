@@ -13,10 +13,11 @@ from data.unaligned_data import UnalignedDataLoader
 
 FLAGS = tf.app.flags.FLAGS
 
+tf.flags.DEFINE_integer('random_seed', 1, 'Random seed for experiments')
+
 tf.flags.DEFINE_integer('load_size', 286, 'Image size to load images')
 tf.flags.DEFINE_integer('img_size', 256, 'Image size to crop images')
 tf.flags.DEFINE_integer('img_nc', 3, 'Image channels')
-tf.flags.DEFINE_integer('random_seed', 1, 'Random seed for experiments')
 
 tf.flags.DEFINE_integer('batch_size', 1, 'Batch size of training images')
 tf.flags.DEFINE_integer('num_vis', 1, 'Batch size of training images')
@@ -26,7 +27,7 @@ tf.flags.DEFINE_integer('nTileRow', 10, 'Row number of synthesized images')
 tf.flags.DEFINE_integer('nTileCol', 10, 'Column number of synthesized images')
 tf.flags.DEFINE_float('beta1', 0.5, 'Momentum term of adam')
 
-# parameters for descriptorNet
+# parameters for ebmNet
 tf.flags.DEFINE_float('e_lr', 0.0002, 'Initial learning rate for ebm')
 tf.flags.DEFINE_float('ebm_refsig', 0.016, 'Standard deviation for reference distribution of ebm')
 tf.flags.DEFINE_integer('ebm_sample_steps', 20, 'Sample steps for Langevin dynamics of ebm') # 15
@@ -61,9 +62,9 @@ tf.flags.DEFINE_string('testB_postfix', 'testB', 'The data directory')
 
 
 def main(_):
-    RANDOM_SEED = 1
-    tf.set_random_seed(RANDOM_SEED)
-    np.random.seed(RANDOM_SEED)
+    random_seed = FLAGS.random_seed
+    tf.set_random_seed(random_seed)
+    np.random.seed(random_seed)
 
     category = FLAGS.category
 
