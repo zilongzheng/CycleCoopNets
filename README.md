@@ -1,7 +1,7 @@
 # Learning Cycle-Consistent Cooperative Networks via Alternating MCMC Teaching for Unsupervised Cross-Domain Translation
 This repository contains our Tensorflow implementation for "Learning Cycle-Consistent Cooperative Networks via Alternating MCMC Teaching for Unsupervised Cross-Domain Translation".
 
-[Project](http://www.stat.ucla.edu/~jxie/CycleCoopNets/) | [Paper] (https://arxiv.org/pdf/2103.04285.pdf)
+[Project](http://www.stat.ucla.edu/~jxie/CycleCoopNets/) | [Paper](https://arxiv.org/pdf/2103.04285.pdf)
 
 ## Prerequisites
 
