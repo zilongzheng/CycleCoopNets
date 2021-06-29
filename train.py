@@ -51,7 +51,7 @@ tf.flags.DEFINE_float('lambda_identity', 0, 'lambda for identity loss')
 
 tf.flags.DEFINE_string('dataroot', './input', 'The data directory')
 tf.flags.DEFINE_string('category', 'summer2winter_yosemite', 'The name of dataset')
-tf.flags.DEFINE_string('output', './output', 'The output directory for saving results')
+tf.flags.DEFINE_string('outroot', './output', 'The output directory for saving results')
 tf.flags.DEFINE_integer('log_interval', 100, 'Number of iterations to save output results')
 tf.flags.DEFINE_integer('save_step', 1, 'Number of epochs to save output results')
 tf.flags.DEFINE_boolean('test', False, 'True if in testing mode')
@@ -72,11 +72,11 @@ def main(_):
     category = FLAGS.category
 
     if FLAGS.test:
-        output_root = FLAGS.output
+        output_root = FLAGS.outroot
     elif FLAGS.debug:
-        output_root = os.path.join(FLAGS.output, 'debug')
+        output_root = os.path.join(FLAGS.outroot, 'debug')
     else:
-        output_root = os.path.join(FLAGS.output, category)
+        output_root = os.path.join(FLAGS.outroot, category)
 
     model = CycleCoopNets(output_root=output_root, isTrain=not FLAGS.test)
 

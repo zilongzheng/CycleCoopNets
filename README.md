@@ -21,7 +21,7 @@ bash ./input/download_cyclegan_dataset.sh summer2winter_yosemite
 ### Train/Test
 - Train a model (*e.g.* summer2winter_yosemite) by 
 ```
-python train.py --dataroot input --category summer2winter_yosemite --output_dir output
+python train.py --dataroot input --category summer2winter_yosemite --outroot output
 ```
 - Visualize training progress
 ```
