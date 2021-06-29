@@ -1,7 +1,3 @@
-from __future__ import division
-from __future__ import print_function
-from genericpath import exists
-
 import os
 import time
 import numpy as np
