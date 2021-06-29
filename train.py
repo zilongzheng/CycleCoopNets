@@ -6,6 +6,9 @@ import time
 import numpy as np
 try:
     import tensorflow.compat.v1 as tf
+    if tf.__version__ >= '2.0':
+        tf.disable_v2_behavior()
+        tf.compat.v1.disable_eager_execution()
 except:
     import tensorflow as tf
 from model.cyclecoopnets import CycleCoopNets
@@ -68,19 +71,19 @@ def main(_):
 
     category = FLAGS.category
 
-    if FLAGS.debug:
-        output_root = os.path.join(FLAGS.output, 'debug')
-    elif FLAGS.test:
+    if FLAGS.test:
         output_root = FLAGS.output
+    elif FLAGS.debug:
+        output_root = os.path.join(FLAGS.output, 'debug')
     else:
         output_root = os.path.join(FLAGS.output, category)
 
     model = CycleCoopNets(output_root=output_root, isTrain=not FLAGS.test)
 
     # gpus = tf.config.experimental.list_physical_devices('GPU')
-    # if len(physical_devices) > FLAGS.gpu:
-    #     tf.config.experimental.set_visible_devices(physical_devices[FLAGS.gpu], 'GPU')
-    #     tf.config.experimental.set_memory_growth(physical_devices[FLAGS.gpu], True)
+    # if len(gpus) > FLAGS.gpu:
+    #     tf.config.experimental.set_memory_growth(gpus[FLAGS.gpu], True)
+    #     tf.config.experimental.set_visible_devices(gpus[FLAGS.gpu], 'GPU')
     gpu_options = tf.GPUOptions(visible_device_list=str(FLAGS.gpu), allow_growth=True)
     config = tf.ConfigProto(gpu_options=gpu_options)
     with tf.Session(config=config) as sess:
@@ -89,14 +92,13 @@ def main(_):
 
         test_data = UnalignedDataLoader(input_dir_A, input_dir_B, no_flip=True, max_dataset_size=100 if FLAGS.debug else 'inf',
             load_size=FLAGS.img_size, crop_size=FLAGS.img_size,  shuffle=False, serial_batches=True)
-        # ckpt = '%s/checkpoints/model.ckpt-%d' % (FLAGS.output_dir, FLAGS.ckpt)
 
         input_dir_A = os.path.join(FLAGS.dataroot, category, FLAGS.trainA_postfix)
         input_dir_B = os.path.join(FLAGS.dataroot, category, FLAGS.trainB_postfix)
 
         if FLAGS.test:
-            ckpt = '%s/checkpoints/model.ckpt-%s' % (output_dir, FLAGS.ckpt)
-            model.inference(sess, test_data, ckpt)
+            ckpt = '%s/checkpoints/model.ckpt-%s' % (output_root, FLAGS.ckpt)
+            model.test(sess, test_data, ckpt)
         else:
             train_data = UnalignedDataLoader(input_dir_A, input_dir_B,  max_dataset_size=100 if FLAGS.debug else 'inf',
                 load_size=FLAGS.load_size, crop_size=FLAGS.img_size, shuffle=True, serial_batches=True)

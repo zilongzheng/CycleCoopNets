@@ -1,16 +1,7 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import os
-import math
 import random
 import numpy as np
 from PIL import Image
-import scipy.misc
-# from skimage.measure import compare_psnr, compare_ssim
-import h5py
-from six.moves import xrange
 
 IMG_EXTENSIONS = [
     '.jpg', '.JPG', '.jpeg', '.JPEG',
@@ -19,7 +10,7 @@ IMG_EXTENSIONS = [
 
 
 class UnalignedDataLoader(object):
-    def __init__(self, dir_A, dir_B, cache=None, load_size=286, crop_size=256, max_dataset_size='inf', shuffle=False, serial_batches=False, no_flip=False):
+    def __init__(self, dir_A, dir_B, load_size=286, crop_size=256, max_dataset_size='inf', shuffle=False, serial_batches=False, no_flip=False):
 
         self.serial_batches = serial_batches
         self.dir_A = dir_A
@@ -33,22 +24,6 @@ class UnalignedDataLoader(object):
         self.crop_size = crop_size
         self.no_flip = no_flip
 
-        # if cache != None and os.path.exists(cache):
-        #     with h5py.File(cache, 'r') as h5:
-        #         self.images_A = np.asarray(h5['images_A'], dtype=np.float32)
-        #         self.images_B = np.asarray(h5['images_B'], dtype=np.float32)
-        # else:
-        #     print('Preloading images...')
-        #     self.images_A = preload_images(self.A_paths, load_size, load_size)
-        #     self.images_B = preload_images(self.B_paths, load_size, load_size)
-        #     if cache != None:
-        #         print('Saving image cache to %s' % cache)
-        #         with h5py.File(cache, 'w') as h5:
-        #             h5.create_dataset('images_A', data=self.images_A)
-        #             h5.create_dataset('images_B', data=self.images_B)
-        # self.images_A = self.images_A[:self.A_size]
-        # self.images_B = self.images_B[:self.B_size]
-        # print('Loaded images, images A: {}, images B: {}'.format(self.images_A.shape, self.images_B.shape))
         # print(self.A_size, self.B_size)
         self.num_images = max(self.A_size, self.B_size)
 
@@ -71,9 +46,11 @@ class UnalignedDataLoader(object):
         return np.stack(images)
 
     def sample_image_pair(self):
-        img_A = Image.open(self.A_paths[np.random.randint(0, self.A_size)]).convert('RGB')
+        img_A = Image.open(
+            self.A_paths[np.random.randint(0, self.A_size)]).convert('RGB')
 
-        img_B = Image.open(self.B_paths[np.random.randint(0, self.B_size)]).convert('RGB')
+        img_B = Image.open(
+            self.B_paths[np.random.randint(0, self.B_size)]).convert('RGB')
         return img_A, img_B
 
     def __getitem__(self, index):

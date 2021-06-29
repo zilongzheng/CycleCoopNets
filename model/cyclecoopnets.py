@@ -1,20 +1,19 @@
 from __future__ import division
 from __future__ import print_function
+from genericpath import exists
 
 import os
 import time
-import math
 import numpy as np
+from tensorflow.python.autograph.pyct.static_analysis.reaching_definitions import TreeAnnotator
 try:
     import tensorflow.compat.v1 as tf
 except:
     import tensorflow as tf
 from model import modules
-from utils.data_util import saveSampleImages, mkdir
-from utils.logger import Logger, numpy_to_image
-from data.unaligned_data import preprocess_image
+from data.data_util import saveSampleImages, numpy_to_image
+from utils.logger import Logger 
 from PIL import Image
-import json
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -45,7 +44,6 @@ class CycleCoopNets(object):
         self.lambda_B = FLAGS.lambdaB  # weight for cycle loss (B -> A -> B)
         # for photo generation from paintings
         self.lambda_identity = FLAGS.lambda_identity
-
 
         self.gen_A = modules.ResnetGenerator(img_nc=self.img_nc, norm_type=self.norm_type,
                                              num_blocks=self.gen_num_blocks, init_gain=self.init_gain, use_dropout=self.use_dropout, name='gen_A')
@@ -130,9 +128,6 @@ class CycleCoopNets(object):
         self.var_list = ebm_A_vars + ebm_B_vars + gen_A_vars + gen_B_vars
 
         if self.isTrain:
-            # with open("%s/ebmcriptor.txt" % self.output_dir, "w") as f:
-            #     f.write(ebm_net)
-
             global_step = tf.Variable(0, trainable=False)
 
             self.ebm_loss_A = tf.reduce_mean(tf.subtract(tf.reduce_mean(
@@ -152,21 +147,13 @@ class CycleCoopNets(object):
             self.ebm_B_step = ebm_optim.minimize(
                 self.ebm_loss_B, var_list=ebm_B_vars)
 
-            # gen_A_vars = [var for var in tf.trainable_variables() if var.name.startswith('gen_A')]
-            # gen_B_vars = [var for var in tf.trainable_variables() if var.name.startswith('gen_B')]
-
             self.gen_loss_A = tf.reduce_mean(
                 tf.square(self.syn_b - self.gen_res_b))  # syn_a = langevin(G(A))
             self.gen_loss_B = tf.reduce_mean(
                 tf.square(self.syn_a - self.gen_res_a))
-            # self.gen_loss_A = tf.reduce_mean(tf.square(self.syn_b - self.gen_res_b))
-            # self.gen_loss_B = tf.reduce_mean(tf.square(self.syn_a - self.gen_res_a))
 
             tf.summary.scalar('gen_loss_A', self.gen_loss_A)
             tf.summary.scalar('gen_loss_B', self.gen_loss_B)
-
-            # self.gen_loss_A = tf.reduce_mean(tf.square(self.syn_b - self.gen_res_b)) # syn_a = langevin(G(A))
-            # self.gen_loss_B = tf.reduce_mean(tf.square(self.syn_a - self.gen_res_a))
 
             self.loss_cycle_A = tf.reduce_mean(
                 tf.abs(self.obs_a - self.rec_a)) * self.lambda_A  # ||G_B(G_A(A)) - A||
@@ -236,6 +223,7 @@ class CycleCoopNets(object):
         # sess.run(tf.local_variables_initializer())
 
         saver = tf.train.Saver(max_to_keep=10)
+        self.logger = Logger(self.log_dir)
 
         sess.run(tf.global_variables_initializer())
 
@@ -257,7 +245,6 @@ class CycleCoopNets(object):
         rec_B_dir = os.path.join(self.sample_dir, 'rec_B')
 
         iters = 0
-        self.logger = Logger(self.log_dir)
 
         log_history = []
 
@@ -336,8 +323,6 @@ class CycleCoopNets(object):
                 rec_results_A.append(rec_a)
                 rec_results_B.append(rec_b)
 
-                iters += 1
-
                 if iters % self.log_interval == 0:
                     print('[Iter {:06d}][ebm loss A: {:.4f}][ebm loss B: {:.4f}][gen loss: {:.4f}]'.format(
                         iters, ebm_loss_A, ebm_loss_B, g_loss
@@ -371,6 +356,15 @@ class CycleCoopNets(object):
                     self.logger.image_summary(
                         'A2B (input, syn, gen, rec)', combined_image_b, iters)
 
+                iters += 1
+
+                # early stop criteria
+                if np.isnan(g_loss) or g_loss > 100:
+                    print('[Iter {:06d}][ebm loss A: {:.4f}][ebm loss B: {:.4f}][gen loss: {:.4f}][Time: {:.2f}'.format(
+                        iters, ebm_loss_A, ebm_loss_B, g_loss, total_time
+                    ))
+                    return
+
             train_data.shuffle()
 
             print('Total time: {}'.format(total_time))
@@ -393,19 +387,13 @@ class CycleCoopNets(object):
             log_msg += '[time: {:.2f}s]'.format(end_time - start_time)
             print(log_msg)
 
-            with open('%s/log.json' % self.log_dir, 'w') as f:
-                json.dump(log_history, f, ensure_ascii=False)
-
-            if np.isnan(log['gen_loss_avg']) or log['gen_loss_avg'] > 100:
-                break
-
             if epoch % self.save_step == 0:
                 if not os.path.exists(self.model_dir):
                     os.makedirs(self.model_dir)
                 saver.save(sess, "%s/%s" %
                            (self.model_dir, 'model.ckpt'), global_step=epoch)
 
-    def inference(self, sess, test_data, ckpt):
+    def test(self, sess, test_data, ckpt):
         """ Testing Function"""
         assert ckpt is not None, 'no valid checkpoint provided'
 
@@ -413,8 +401,8 @@ class CycleCoopNets(object):
 
         rec_A_dir = os.path.join(test_dir, 'rec_A')
         rec_B_dir = os.path.join(test_dir, 'rec_B')
-        sample_A_dir = os.path.join(test_dir, 'sample_A2B')
-        sample_B_dir = os.path.join(test_dir, 'sample_B2A')
+        sample_B_dir = os.path.join(test_dir, 'sample_A2B')
+        sample_A_dir = os.path.join(test_dir, 'sample_B2A')
         obs_A_dir = os.path.join(test_dir, 'obs_A')
         obs_B_dir = os.path.join(test_dir, 'obs_B')
 
@@ -424,16 +412,23 @@ class CycleCoopNets(object):
         print('Successfully load checkpoint {}'.format(ckpt))
 
         for bi in range(len(test_data)):
-            obs_a, obs_b = test_data[bi]
-            obs_a = np.expand_dims(obs_a, axis=0)
-            obs_b = np.expand_dims(obs_b, axis=0)
+            obs_a, obs_b = test_data[bi:bi+1]
 
             [gen_res_b, syn_b] = sess.run(
-                [self.gen_res_b, self.syn_b], feed_dict={self.obs_a: obs_a})
+                [self.gen_res_b, self.syn_b], feed_dict={self.obs_a: obs_a, self.training: False})
 
             [gen_res_a, syn_a] = sess.run(
-                [self.gen_res_a, self.syn_a], feed_dict={self.obs_b: obs_b})
+                [self.gen_res_a, self.syn_a], feed_dict={self.obs_b: obs_b, self.training: False})
 
             rec_a, rec_b = sess.run([self.rec_a, self.rec_b], feed_dict={
-                self.obs_a: obs_a, self.obs_b: obs_b
+                self.obs_a: obs_a, self.obs_b: obs_b, self.training: False
             })
+
+            saveSampleImages(obs_a, os.path.join(obs_A_dir, 'oba_A_{:03d}.png'.format(bi)), 1, 1)
+            saveSampleImages(obs_b, os.path.join(obs_B_dir, 'obs_B_{:03d}.png'.format(bi)), 1, 1)
+            saveSampleImages(gen_res_a, os.path.join(sample_A_dir, 'gen_B2A_{:03d}.png'.format(bi)), 1, 1)
+            saveSampleImages(gen_res_b, os.path.join(sample_B_dir, 'gen_A2B_{:03d}.png'.format(bi)), 1, 1)
+            saveSampleImages(syn_a, os.path.join(sample_A_dir, 'syn_B2A_{:03d}.png'.format(bi)), 1, 1)
+            saveSampleImages(syn_b, os.path.join(sample_B_dir, 'syn_A2B_{:03d}.png'.format(bi)), 1, 1)
+            saveSampleImages(rec_a, os.path.join(rec_A_dir, 'rec_A2B2A_{:03d}.png'.format(bi)), 1, 1)
+            saveSampleImages(rec_b, os.path.join(rec_B_dir, 'rec_B2A2B_{:03d}.png'.format(bi)), 1, 1)

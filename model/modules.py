@@ -2,8 +2,23 @@ try:
     import tensorflow.compat.v1 as tf
 except:
     import tensorflow as tf
-from model.custom_ops import *
 
+def batch_norm(x, training=True, name=None):
+    return tf.layers.batch_normalization(x, training=training, name=name)
+
+def instance_norm(x, epsilon=1e-6, training=True, name=None):
+    with tf.variable_scope(name):
+        mean, var = tf.nn.moments(x, [1, 2], keep_dims=True)
+        scale = tf.get_variable('scale', [x.get_shape()[-1]],
+                                initializer=tf.truncated_normal_initializer(
+                                    mean=1.0, stddev=0.02))
+        offset = tf.get_variable(
+            'offset', [x.get_shape()[-1]],
+            initializer=tf.constant_initializer(0.0)
+        )
+        inv = tf.rsqrt(var + epsilon)
+        out = scale * (x - mean) * inv + offset
+        return out
 
 def get_norm_layer(norm_type):
     if norm_type == 'batch_norm':
